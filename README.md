@@ -3,16 +3,18 @@ Desafio IDdog https://iddog-api.now.sh
 
 Aplicativo que utiliza autenticação por email e lista lindos cachorrinhos
 
-## Arquitetura
-* MVVM + Android Architecture Components
-* Kodein - Kotlin Dependency Injection
-* Retrofit
+## No desenvolvimento do teste utiliza-se
+* Kotlin
+* Arquitetura MVVM 
+* Android Architecture Components
+* Kodein - KOtlin DEpendency INjection
+* Retrofit utilizando Kotlin Coroutines
 * Picasso
 * Test Mockito + Mockwebserver
 
 ## Tela de Autenticação
 
-Contem uma simples animação no inicio e basta informar seu email, o mesmo é validado antes de efetuar a requisição `/signup`
+Contém uma simples animação no inicio e basta informar seu email, o mesmo é validado antes de efetuar a requisição `/signup`
 
 ## Tela de Feed
 
