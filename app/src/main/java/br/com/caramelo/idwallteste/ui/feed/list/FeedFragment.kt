@@ -50,11 +50,6 @@ class FeedFragment : BaseFragment() {
         } else {
             context?.startActivity(intent)
         }
-//        val transition = fragmentManager?.beginTransaction()
-//                ?.addSharedElement(view, view.transitionName)
-//
-//        FeedDialogFragment.newInstance(url)
-//                .show(transition, "")
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
@@ -76,13 +71,26 @@ class FeedFragment : BaseFragment() {
 
         recyclerView.adapter = adapter
 
+        viewModel.tryAgainLiveData.value?.let {
+            tryAgainObserver.onChanged(it)
+        }
+
+        viewModel.loadingLiveData.value?.let {
+            loadingObserver.onChanged(it)
+        }
+
         viewModel.feedLiveData?.value?.let {
-            categoryLabel.text = it.category
+            feedObserver.onChanged(it)
+        }
+
+        tryAgainButton.setOnClickListener {
+            viewModel.requestFeed()
         }
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
+        viewModel.tryAgainLiveData.observe(this, tryAgainObserver)
         viewModel.loadingLiveData.observe(this, loadingObserver)
         viewModel.feedLiveData?.observe(this, feedObserver)
     }
@@ -94,6 +102,10 @@ class FeedFragment : BaseFragment() {
     private val feedObserver = Observer<Feed> { feed ->
         categoryLabel.text = feed?.category
         adapter.feed = feed
+    }
+
+    private val tryAgainObserver = Observer<Boolean> {
+        tryAgainView.visibility = if (it == true) View.VISIBLE else View.GONE
     }
 
 }

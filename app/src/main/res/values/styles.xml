@@ -9,6 +9,8 @@
         <item name="android:windowBackground">@android:color/white</item>
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowContentTransitions">true</item>
+
+        <item name="android:buttonStyle">@style/AppTheme.ButtonStyle</item>
     </style>
 
     <style name="AppTheme.NoActionBar">
@@ -31,6 +33,12 @@
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:windowAllowEnterTransitionOverlap">true</item>
         <item name="android:windowEnterTransition">@transition/feed_detail_enter</item>
+    </style>
+
+    <style name="AppTheme.ButtonStyle" parent="Widget.AppCompat.Button.Colored">
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="colorButtonNormal">@android:color/black</item>
     </style>
 
 </resources>

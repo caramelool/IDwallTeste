@@ -13,6 +13,7 @@ open class FeedViewModel(
         private val repository: FeedRepository = kodein.instance()
 ) : ViewModel() {
 
+    var tryAgainLiveData = MutableLiveData<Boolean>()
     var loadingLiveData = MutableLiveData<Boolean>()
     var feedLiveData: MutableLiveData<Feed>? = null
         get() {
@@ -24,6 +25,7 @@ open class FeedViewModel(
         }
 
     open fun requestFeed() {
+        tryAgainLiveData.postValue(false)
         loadingLiveData.postValue(true)
         repository.feed(category)
                 .observer { feed ->
@@ -31,6 +33,7 @@ open class FeedViewModel(
                     loadingLiveData.postValue(false)
                 }
                 .observerThrowable {
+                    tryAgainLiveData.postValue(true)
                     loadingLiveData.postValue(false)
                 }
     }

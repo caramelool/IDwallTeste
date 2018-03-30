@@ -5,11 +5,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.support.annotation.StringRes
 import android.support.transition.TransitionManager
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.View
 import androidx.view.doOnLayout
 import br.com.caramelo.idwallteste.R
+import br.com.caramelo.idwallteste.ext.onTextChangeListener
 import br.com.caramelo.idwallteste.ui.base.BaseActivity
 import br.com.caramelo.idwallteste.ui.feed.list.FeedActivity
 import kotlinx.android.synthetic.main.activity_auth.*
@@ -26,40 +25,33 @@ class AuthActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_auth)
 
-        emailTextInput.editText?.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(editable: Editable?) {
+        constraintLayout.doOnLayout {
+
+            if (savedInstanceState == null) {
+                titleView.visibility = View.VISIBLE
+                emailTextInput.visibility = View.GONE
+                nextButton.visibility = View.GONE
+
+                startAnimation()
+            } else {
+                    val email = savedInstanceState.getString(EXTRA_EMAIL)
+                    titleView.y = titleY
+                    emailTextInput.editText?.setText(email)
+                    emailTextInput.editText?.setSelection(email.length)
+            }
+
+            emailTextInput.editText?.onTextChangeListener {
                 emailTextInput.error?.let {
                     emailTextInput.error = null
                 }
-                nextButton.visibility = if (editable?.isEmpty() == true) View.GONE else View.VISIBLE
+                nextButton.visibility = if (it.isEmpty()) View.GONE else View.VISIBLE
             }
 
-            override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
-
+            nextButton.setOnClickListener {
+                val email = emailTextInput.editText?.text.toString()
+                viewModel.auth(email)
             }
 
-            override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
-
-            }
-        })
-
-        nextButton.setOnClickListener {
-            val email = emailTextInput.editText?.text.toString()
-            viewModel.auth(email)
-        }
-
-        if (savedInstanceState == null) {
-            titleView.visibility = View.VISIBLE
-            emailTextInput.visibility = View.GONE
-            nextButton.visibility = View.GONE
-
-            startAnimation()
-        } else {
-            constraintLayout.doOnLayout {
-                val email = savedInstanceState.getString(EXTRA_EMAIL)
-                titleView.y = titleY
-                emailTextInput.editText?.setText(email)
-            }
         }
     }
 
@@ -74,7 +66,9 @@ class AuthActivity : BaseActivity() {
                 showError(R.string.email_invalid_message)
             }
             AuthStep.IN_PROGRESS -> showLoading()
-            AuthStep.SUCCESS -> starDogPager()
+            AuthStep.SUCCESS -> {
+                starFeed()
+            }
             AuthStep.FAIL -> {
                 hideLoading()
                 showError(R.string.auth_unsuccessful_message)
@@ -86,7 +80,7 @@ class AuthActivity : BaseActivity() {
         emailTextInput.error = getString(resId)
     }
 
-    private fun starDogPager() {
+    private fun starFeed() {
         val intent = Intent(this, FeedActivity::class.java)
         startActivity(intent)
         finish()
