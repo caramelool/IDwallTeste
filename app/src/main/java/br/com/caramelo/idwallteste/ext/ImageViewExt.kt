@@ -8,7 +8,6 @@ import com.squareup.picasso.Picasso
 
 fun ImageView.load(url: String) {
     Picasso.get().load(url)
-            .networkPolicy(NetworkPolicy.OFFLINE)
             .transform(RoundedCornersTransformation(15, 5))
             .placeholder(R.drawable.feed_placeholder)
             .error(R.drawable.feed_placeholder)
