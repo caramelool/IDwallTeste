@@ -7,10 +7,10 @@ Aplicativo que utiliza autenticação por email e lista lindos cachorrinhos
 * Kotlin
 * Arquitetura MVVM 
 * Android Architecture Components
-* Kodein - KOtlin DEpendency INjection
+* Dagger Android
 * Retrofit utilizando Kotlin Coroutines
 * Picasso
-* Test Mockito + Mockwebserver
+* Testes unitários
 
 ## Tela de Autenticação
 
