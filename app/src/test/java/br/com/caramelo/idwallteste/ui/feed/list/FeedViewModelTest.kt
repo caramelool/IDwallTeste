@@ -65,10 +65,14 @@ class FeedViewModelTest: LifecycleOwner {
         val argumentCaptor = ArgumentCaptor.forClass(Any::class.java)
 
         argumentCaptor.run {
-            verify(observerState, times(3)).onChanged(capture())
-            Assert.assertEquals(FeedViewModelState.Loading(true), allValues[0])
-            Assert.assertEquals(FeedViewModelState.FeedList(mock), allValues[1])
-            Assert.assertEquals(FeedViewModelState.Loading(false), allValues[2])
+            verify(observerState, times(4)).onChanged(capture())
+
+            val (hideTryAgain, showLoading, feed, hideLoading) = allValues
+
+            Assert.assertEquals(FeedViewModelState.TryAgain(false), hideTryAgain)
+            Assert.assertEquals(FeedViewModelState.Loading(true), showLoading)
+            Assert.assertEquals(FeedViewModelState.FeedList(mock), feed)
+            Assert.assertEquals(FeedViewModelState.Loading(false), hideLoading)
         }
     }
 
@@ -84,10 +88,14 @@ class FeedViewModelTest: LifecycleOwner {
         val argumentCaptor = ArgumentCaptor.forClass(Any::class.java)
 
         argumentCaptor.run {
-            verify(observerState, times(3)).onChanged(capture())
-            Assert.assertEquals(FeedViewModelState.Loading(true), allValues[0])
-            Assert.assertEquals(true, allValues[1] is FeedViewModelState.TryAgain)
-            Assert.assertEquals(FeedViewModelState.Loading(false), allValues[2])
+            verify(observerState, times(4)).onChanged(capture())
+
+            val (hideTryAgain, showLoading, showTryAgain, hideLoading) = allValues
+
+            Assert.assertEquals(FeedViewModelState.TryAgain(false), hideTryAgain)
+            Assert.assertEquals(FeedViewModelState.Loading(true), showLoading)
+            Assert.assertEquals(FeedViewModelState.TryAgain(true), showTryAgain)
+            Assert.assertEquals(FeedViewModelState.Loading(false), hideLoading)
         }
     }
 }

@@ -50,12 +50,14 @@ class AuthViewModelTest {
         viewModel.auth()
 
         val argumentCaptor = ArgumentCaptor.forClass(Any::class.java)
-        val buttonVisibilityExpected = AuthViewModelState.ButtonVisibility(true)
 
         argumentCaptor.run {
             verify(observerState, times(2)).onChanged(capture())
-            assertEquals(buttonVisibilityExpected, allValues[0])
-            assertEquals(true, allValues[1] is AuthViewModelState.InvalidEmailAddress)
+
+            val (buttonVisibility, invalidEmail) = allValues
+
+            assertEquals(AuthViewModelState.ButtonVisibility(true), buttonVisibility)
+            assertEquals(true, invalidEmail is AuthViewModelState.InvalidEmailAddress)
         }
     }
 
@@ -73,9 +75,14 @@ class AuthViewModelTest {
 
         argumentCaptor.run {
             verify(observerState, times(3)).onChanged(capture())
-            assertEquals(buttonVisibilityExpected, allValues[0])
-            assertEquals(true, allValues[1] is AuthViewModelState.InProgressAddress)
-            assertEquals(true, allValues[2] is AuthViewModelState.Success)
+
+            val (buttonVisibility, inProgress, response) = allValues
+
+            assertEquals(AuthViewModelState.ButtonVisibility(true), buttonVisibility)
+
+            assertEquals(buttonVisibilityExpected, buttonVisibility)
+            assertEquals(true, inProgress is AuthViewModelState.InProgressAddress)
+            assertEquals(true, response is AuthViewModelState.Success)
         }
     }
 
@@ -93,9 +100,14 @@ class AuthViewModelTest {
 
         argumentCaptor.run {
             verify(observerState, times(3)).onChanged(capture())
-            assertEquals(buttonVisibilityExpected, allValues[0])
-            assertEquals(true, allValues[1] is AuthViewModelState.InProgressAddress)
-            assertEquals(true, allValues[2] is AuthViewModelState.Fail)
+
+            val (buttonVisibility, inProgress, response) = allValues
+
+            assertEquals(AuthViewModelState.ButtonVisibility(true), buttonVisibility)
+
+            assertEquals(buttonVisibilityExpected, buttonVisibility)
+            assertEquals(true, inProgress is AuthViewModelState.InProgressAddress)
+            assertEquals(true, response is AuthViewModelState.Fail)
         }
     }
 }

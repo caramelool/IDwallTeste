@@ -29,16 +29,21 @@ class FeedViewModel @Inject constructor(
             addSource(feedLiveData)
         }
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
-    private fun requestFeed() {
-        if (isInitialized()) return
 
+    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    private fun onCreate() {
+        if (isInitialized()) return
+        requestFeed()
+    }
+
+    fun requestFeed() {
         uiScope.launch {
+            hideTryAgain()
             showLoading()
             val feed = repository.feed(category)
             when (feed) {
                 null -> {
-                    tryAgain()
+                    showTryAgain()
                     hideLoading()
                 }
                 else -> {
@@ -57,8 +62,12 @@ class FeedViewModel @Inject constructor(
         loadingLiveData.postValue(FeedViewModelState.Loading(false))
     }
 
-    private fun tryAgain() {
-        tryAgainLiveData.postValue(FeedViewModelState.TryAgain)
+    private fun showTryAgain() {
+        tryAgainLiveData.postValue(FeedViewModelState.TryAgain(true))
+    }
+
+    private fun hideTryAgain() {
+        tryAgainLiveData.postValue(FeedViewModelState.TryAgain(false))
     }
 
     class Factory @Inject constructor(
@@ -75,7 +84,7 @@ class FeedViewModel @Inject constructor(
 }
 
 sealed class FeedViewModelState {
-    object TryAgain : FeedViewModelState()
+    data class TryAgain(val visible: Boolean) : FeedViewModelState()
     data class Loading(val visible: Boolean) : FeedViewModelState()
     data class FeedList(val feed: Feed?) : FeedViewModelState()
 }

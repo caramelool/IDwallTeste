@@ -82,6 +82,10 @@ class FeedFragment : BaseFragment() {
             drawingCacheQuality = View.DRAWING_CACHE_QUALITY_HIGH
             adapter = feedAdapter
         }
+
+        tryAgainButton.setOnClickListener {
+            viewModel.requestFeed()
+        }
     }
 
     override fun render(state: State) {
@@ -90,7 +94,7 @@ class FeedFragment : BaseFragment() {
                 renderLoading(state)
             }
             is FeedViewModelState.TryAgain -> {
-                renderTryAgain()
+                renderTryAgain(state)
             }
             is FeedViewModelState.FeedList -> {
                 renderFeed(state)
@@ -109,8 +113,8 @@ class FeedFragment : BaseFragment() {
         }
     }
 
-    private fun renderTryAgain() {
-        tryAgainView.visibility = View.VISIBLE
+    private fun renderTryAgain(state: FeedViewModelState.TryAgain) {
+        tryAgainView.visibility = if (state.visible) View.VISIBLE else View.GONE
     }
 
 }
