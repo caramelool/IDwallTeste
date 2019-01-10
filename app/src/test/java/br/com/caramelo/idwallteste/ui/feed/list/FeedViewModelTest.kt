@@ -1,60 +1,93 @@
 package br.com.caramelo.idwallteste.ui.feed.list
 
+import android.arch.core.executor.testing.InstantTaskExecutorRule
+import android.arch.lifecycle.Lifecycle
+import android.arch.lifecycle.LifecycleOwner
+import android.arch.lifecycle.LifecycleRegistry
 import android.arch.lifecycle.Observer
-import br.com.caramelo.idwallteste.BaseTest
+import br.com.caramelo.idwallteste.ModelMock
 import br.com.caramelo.idwallteste.data.model.entity.DogCategory
 import br.com.caramelo.idwallteste.data.model.entity.Feed
 import br.com.caramelo.idwallteste.data.repository.FeedRepository
-import com.github.salomonbrys.kodein.instance
-import okhttp3.mockwebserver.MockResponse
+import br.com.caramelo.idwallteste.testDispatcher
+import br.com.caramelo.idwallteste.ui.auth.AuthViewModelState
+import br.com.caramelo.idwallteste.ui.base.State
+import com.nhaarman.mockitokotlin2.whenever
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import org.mockito.ArgumentMatchers.*
+import org.junit.runner.RunWith
+import org.mockito.ArgumentCaptor
+import org.mockito.Mock
 import org.mockito.Mockito.*
+import org.mockito.junit.MockitoJUnitRunner
 
-class FeedViewModelTest: BaseTest() {
+@RunWith(MockitoJUnitRunner::class)
+class FeedViewModelTest: LifecycleOwner {
 
-    private lateinit var repository: FeedRepository
+    @get:Rule
+    val rule = InstantTaskExecutorRule()
+
+    @Mock
+    lateinit var repository: FeedRepository
+
+    @Mock
+    lateinit var observerState: Observer<State>
+
     private lateinit var viewModel: FeedViewModel
     private var category = DogCategory.HUSKY
+    private val lifecycleRegistry = LifecycleRegistry(this)
+
+    override fun getLifecycle(): Lifecycle {
+        return lifecycleRegistry
+    }
 
     @Before
-    override fun `before each test`() {
-        super.`before each test`()
-        repository = spy(kodein.instance<FeedRepository>())
-        viewModel = spy(FeedViewModel(category, repository))
+    fun before() {
+        viewModel = spy(FeedViewModel(category, repository, testDispatcher))
+        viewModel.mediator.observeForever(observerState)
+        lifecycle.addObserver(viewModel)
     }
 
     @Test
-    fun `should request all dogs images correspond the category`() {
-        val loadingObserver: Observer<Boolean> = mock()
-        val feedObserver: Observer<Feed> = mock()
+    fun `should request all dogs images correspond the category`() = runBlocking {
 
-        server.enqueue(MockResponse()
-                .setResponseCode(200)
-                .setBody(FEED_RESPONSE_200))
+        val mock = ModelMock.FEED
 
-        viewModel.loadingLiveData.observeForever(loadingObserver)
-        viewModel.feedLiveData?.observeForever(feedObserver)
+        doReturn(mock)
+            .whenever(repository)
+            .feed(category)
 
-        verify(viewModel).requestFeed()
-        verify(loadingObserver).onChanged(true)
-        verify(repository).feed(category)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
 
-        await()
+        val argumentCaptor = ArgumentCaptor.forClass(Any::class.java)
 
-        verify(feedObserver).onChanged(any())
-        verify(loadingObserver).onChanged(false)
+        argumentCaptor.run {
+            verify(observerState, times(3)).onChanged(capture())
+            Assert.assertEquals(FeedViewModelState.Loading(true), allValues[0])
+            Assert.assertEquals(FeedViewModelState.FeedList(mock), allValues[1])
+            Assert.assertEquals(FeedViewModelState.Loading(false), allValues[2])
+        }
     }
 
-    private val FEED_RESPONSE_200 = "{\n" +
-            "    \"category\": \"${category.name}\",\n" +
-            "    \"list\": [\n" +
-            "        \"https://dog.ceo/api/img/${category.name}/n02110958_10.jpg\",\n" +
-            "        \"https://dog.ceo/api/img/${category.name}/n02110958_10186.jpg\",\n" +
-            "        \"https://dog.ceo/api/img/${category.name}/n02110958_10193.jpg\",\n" +
-            "        \"https://dog.ceo/api/img/${category.name}/n02110958_10378.jpg\",\n" +
-            "        \"https://dog.ceo/api/img/${category.name}/n02110958_10842.jpg\"\n" +
-            "    ]\n" +
-            "}"
+    @Test
+    fun `should try again when received a null feed`() = runBlocking {
+
+        doReturn(null)
+            .whenever(repository)
+            .feed(category)
+
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+
+        val argumentCaptor = ArgumentCaptor.forClass(Any::class.java)
+
+        argumentCaptor.run {
+            verify(observerState, times(3)).onChanged(capture())
+            Assert.assertEquals(FeedViewModelState.Loading(true), allValues[0])
+            Assert.assertEquals(true, allValues[1] is FeedViewModelState.TryAgain)
+            Assert.assertEquals(FeedViewModelState.Loading(false), allValues[2])
+        }
+    }
 }

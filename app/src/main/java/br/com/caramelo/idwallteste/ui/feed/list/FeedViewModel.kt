@@ -1,40 +1,81 @@
 package br.com.caramelo.idwallteste.ui.feed.list
 
-import android.arch.lifecycle.MutableLiveData
-import android.arch.lifecycle.ViewModel
+import android.arch.lifecycle.*
 import br.com.caramelo.idwallteste.data.model.entity.DogCategory
 import br.com.caramelo.idwallteste.data.model.entity.Feed
 import br.com.caramelo.idwallteste.data.repository.FeedRepository
-import br.com.caramelo.idwallteste.kodein
-import com.github.salomonbrys.kodein.instance
+import br.com.caramelo.idwallteste.ui.base.BaseViewModel
+import br.com.caramelo.idwallteste.ui.base.State
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.android.Main
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-open class FeedViewModel(
-        private val category: DogCategory,
-        private val repository: FeedRepository = kodein.instance()
-) : ViewModel() {
+class FeedViewModel @Inject constructor(
+    private val category: DogCategory,
+    private val repository: FeedRepository,
+    dispatcher: CoroutineDispatcher = Dispatchers.Main
+) : BaseViewModel(dispatcher) {
 
-    var tryAgainLiveData = MutableLiveData<Boolean>()
-    var loadingLiveData = MutableLiveData<Boolean>()
-    var feedLiveData: MutableLiveData<Feed>? = null
-        get() {
-            if (field == null) {
-                field = MutableLiveData()
-                requestFeed()
-            }
-            return field
+    private val tryAgainLiveData = MutableLiveData<FeedViewModelState.TryAgain>()
+    private val loadingLiveData = MutableLiveData<FeedViewModelState.Loading>()
+    private val feedLiveData = MutableLiveData<FeedViewModelState.FeedList>()
+
+    override val mediator: MediatorLiveData<State>
+        get() = MediatorLiveData<State>().apply {
+            addSource(tryAgainLiveData)
+            addSource(loadingLiveData)
+            addSource(feedLiveData)
         }
 
-    open fun requestFeed() {
-        tryAgainLiveData.postValue(false)
-        loadingLiveData.postValue(true)
-        repository.feed(category)
-                .observer { feed ->
-                    feedLiveData?.postValue(feed)
-                    loadingLiveData.postValue(false)
+    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    private fun requestFeed() {
+        if (isInitialized()) return
+
+        uiScope.launch {
+            showLoading()
+            val feed = repository.feed(category)
+            when (feed) {
+                null -> {
+                    tryAgain()
+                    hideLoading()
                 }
-                .observerThrowable {
-                    tryAgainLiveData.postValue(true)
-                    loadingLiveData.postValue(false)
+                else -> {
+                    feedLiveData.postValue(FeedViewModelState.FeedList(feed))
+                    hideLoading()
                 }
+            }
+        }
     }
+
+    private fun showLoading() {
+        loadingLiveData.postValue(FeedViewModelState.Loading(true))
+    }
+
+    private fun hideLoading() {
+        loadingLiveData.postValue(FeedViewModelState.Loading(false))
+    }
+
+    private fun tryAgain() {
+        tryAgainLiveData.postValue(FeedViewModelState.TryAgain)
+    }
+
+    class Factory @Inject constructor(
+        private val category: DogCategory,
+        private val repository: FeedRepository
+    ) : ViewModelProvider.Factory {
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel?> create(modelClass: Class<T>): T {
+            return FeedViewModel(category, repository) as T
+        }
+
+    }
+}
+
+sealed class FeedViewModelState {
+    object TryAgain : FeedViewModelState()
+    data class Loading(val visible: Boolean) : FeedViewModelState()
+    data class FeedList(val feed: Feed?) : FeedViewModelState()
 }

@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".ui.feed.list.FeedActivity">
+    tools:context=".ui.feed.category.FeedCategoryActivity">
 
     <include
         layout="@layout/view_title_iddog"

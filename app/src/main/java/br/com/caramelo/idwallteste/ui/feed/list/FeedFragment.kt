@@ -1,7 +1,6 @@
 package br.com.caramelo.idwallteste.ui.feed.list
 
 import android.app.Activity
-import android.arch.lifecycle.Observer
 import android.content.Intent
 import android.os.Bundle
 import android.support.v4.app.ActivityOptionsCompat
@@ -13,12 +12,14 @@ import android.view.View
 import android.view.ViewGroup
 import br.com.caramelo.idwallteste.R
 import br.com.caramelo.idwallteste.data.model.entity.DogCategory
-import br.com.caramelo.idwallteste.data.model.entity.Feed
 import br.com.caramelo.idwallteste.ui.base.BaseFragment
+import br.com.caramelo.idwallteste.ui.base.BaseViewModel
+import br.com.caramelo.idwallteste.ui.base.State
 import br.com.caramelo.idwallteste.ui.feed.detail.EXTRA_URL
 import br.com.caramelo.idwallteste.ui.feed.detail.FeedDetailActivity
+import dagger.android.support.AndroidSupportInjection
 import kotlinx.android.synthetic.main.fragment_feed.*
-
+import javax.inject.Inject
 
 const val PARAM_FEED_CATEGORY = "param_category"
 
@@ -26,18 +27,27 @@ class FeedFragment : BaseFragment() {
 
     companion object {
         fun newInstance(category: DogCategory): FeedFragment {
-            val fragment = FeedFragment()
-            fragment.arguments = Bundle()
-            fragment.arguments?.putString(PARAM_FEED_CATEGORY, category.name)
-            return fragment
+            return FeedFragment().apply {
+                arguments = Bundle().apply {
+                    putString(PARAM_FEED_CATEGORY, category.name)
+                }
+            }
         }
     }
 
-    private val viewModel by lazy {
-        providesOf(FeedViewModel::class, FeedFactory(arguments))
-    }
+    /**
+     * ViewModel initialize
+     */
 
-    private val adapter = FeedAdapter { view, url ->
+    @Inject
+    lateinit var factory: FeedViewModel.Factory
+
+    private val viewModel by lazy { viewModel<FeedViewModel>(factory).value }
+
+    override val viewModels: Array<BaseViewModel>
+        get() = arrayOf(viewModel)
+
+    private val feedAdapter = FeedAdapter { view, url ->
 
         val intent = Intent(context, FeedDetailActivity::class.java)
         intent.putExtra(EXTRA_URL, url)
@@ -58,54 +68,49 @@ class FeedFragment : BaseFragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        AndroidSupportInjection.inject(this)
         super.onViewCreated(view, savedInstanceState)
 
         val spanCount = resources.getInteger(R.integer.span_count)
-        val layoutManager = StaggeredGridLayoutManager(spanCount, OrientationHelper.VERTICAL)
-        layoutManager.gapStrategy = StaggeredGridLayoutManager.GAP_HANDLING_MOVE_ITEMS_BETWEEN_SPANS
-        recyclerView.layoutManager = layoutManager //GridLayoutManager(context, spanCount)
+        val gridLayoutManager = StaggeredGridLayoutManager(spanCount, OrientationHelper.VERTICAL)
+        gridLayoutManager.gapStrategy = StaggeredGridLayoutManager.GAP_HANDLING_MOVE_ITEMS_BETWEEN_SPANS
 
-        recyclerView.setItemViewCacheSize(20)
-        recyclerView.isDrawingCacheEnabled = true
-        recyclerView.drawingCacheQuality = View.DRAWING_CACHE_QUALITY_HIGH
-
-        recyclerView.adapter = adapter
-
-        viewModel.tryAgainLiveData.value?.let {
-            tryAgainObserver.onChanged(it)
-        }
-
-        viewModel.loadingLiveData.value?.let {
-            loadingObserver.onChanged(it)
-        }
-
-        viewModel.feedLiveData?.value?.let {
-            feedObserver.onChanged(it)
-        }
-
-        tryAgainButton.setOnClickListener {
-            viewModel.requestFeed()
+        recyclerView.apply {
+            layoutManager = gridLayoutManager //GridLayoutManager(context, spanCount)
+            setItemViewCacheSize(20)
+            isDrawingCacheEnabled = true
+            drawingCacheQuality = View.DRAWING_CACHE_QUALITY_HIGH
+            adapter = feedAdapter
         }
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        viewModel.tryAgainLiveData.observe(this, tryAgainObserver)
-        viewModel.loadingLiveData.observe(this, loadingObserver)
-        viewModel.feedLiveData?.observe(this, feedObserver)
+    override fun render(state: State) {
+        when (state) {
+            is FeedViewModelState.Loading -> {
+                renderLoading(state)
+            }
+            is FeedViewModelState.TryAgain -> {
+                renderTryAgain()
+            }
+            is FeedViewModelState.FeedList -> {
+                renderFeed(state)
+            }
+        }
     }
 
-    private val loadingObserver = Observer<Boolean> {
-        loading.visibility = if (it == true) View.VISIBLE else View.GONE
+    private fun renderLoading(state: FeedViewModelState.Loading) {
+        loading.visibility = if (state.visible) View.VISIBLE else View.GONE
     }
 
-    private val feedObserver = Observer<Feed> { feed ->
-        categoryLabel.text = feed?.category
-        adapter.feed = feed
+    private fun renderFeed(state: FeedViewModelState.FeedList) {
+        with(state) {
+            categoryLabel.text = feed?.category
+            feedAdapter.feed = feed
+        }
     }
 
-    private val tryAgainObserver = Observer<Boolean> {
-        tryAgainView.visibility = if (it == true) View.VISIBLE else View.GONE
+    private fun renderTryAgain() {
+        tryAgainView.visibility = View.VISIBLE
     }
 
 }

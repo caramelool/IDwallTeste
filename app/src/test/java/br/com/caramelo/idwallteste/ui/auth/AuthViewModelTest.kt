@@ -1,103 +1,101 @@
 package br.com.caramelo.idwallteste.ui.auth
 
+import android.arch.core.executor.testing.InstantTaskExecutorRule
+import android.arch.lifecycle.Lifecycle
+import android.arch.lifecycle.LifecycleOwner
+import android.arch.lifecycle.LifecycleRegistry
 import android.arch.lifecycle.Observer
-import br.com.caramelo.idwallteste.BaseTest
-import br.com.caramelo.idwallteste.data.model.entity.Session
 import br.com.caramelo.idwallteste.data.repository.AuthRepository
-import com.github.salomonbrys.kodein.instance
-import okhttp3.mockwebserver.MockResponse
+import br.com.caramelo.idwallteste.testDispatcher
+import br.com.caramelo.idwallteste.ui.base.State
+import com.nhaarman.mockitokotlin2.whenever
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
 
 import org.junit.Before
+import org.junit.Rule
+import org.junit.runner.RunWith
+import org.mockito.ArgumentCaptor
+import org.mockito.Mock
 import org.mockito.Mockito.*
+import org.mockito.junit.MockitoJUnitRunner
 
-class AuthViewModelTest: BaseTest() {
+@RunWith(MockitoJUnitRunner::class)
+class AuthViewModelTest {
 
-    private lateinit var repository: AuthRepository
+    @get:Rule
+    val rule = InstantTaskExecutorRule()
+
+    @Mock
+    lateinit var repository: AuthRepository
+
+    @Mock
+    lateinit var observerState: Observer<State>
+
     private lateinit var viewModel: AuthViewModel
+
     private val email = "lucascaramelo@gmail.com"
 
     @Before
-    override fun `before each test`() {
-        super.`before each test`()
-        repository = spy(kodein.instance<AuthRepository>())
-        viewModel = spy(AuthViewModel(repository))
-        Session.user = null
+    fun before()  {
+        viewModel = spy(AuthViewModel(repository, testDispatcher))
+        viewModel.mediator.observeForever(observerState)
     }
 
     @Test
-    fun `shouldn't authentication the user when received a incorrect email `() {
-        val stepObserver: Observer<AuthStep> = mock()
+    fun `shouldn't authentication the user when received a incorrect email `() = runBlocking {
+        viewModel.setEmail("blablabla")
+        viewModel.auth()
 
-        val email = "blablablabla"
+        val argumentCaptor = ArgumentCaptor.forClass(Any::class.java)
+        val buttonVisibilityExpected = AuthViewModelState.ButtonVisibility(true)
 
-        viewModel.stepLiveData.observeForever(stepObserver)
-
-        doReturn(false).`when`(viewModel).isValidEmail(email)
-
-        viewModel.auth(email)
-
-        verify(viewModel).isValidEmail(email)
-        verify(stepObserver).onChanged(AuthStep.INVALID_EMAIL_ADDRESS)
-        verify(repository, never()).auth(email)
+        argumentCaptor.run {
+            verify(observerState, times(2)).onChanged(capture())
+            assertEquals(buttonVisibilityExpected, allValues[0])
+            assertEquals(true, allValues[1] is AuthViewModelState.InvalidEmailAddress)
+        }
     }
 
     @Test
-    fun `should authentication the user when received a correct email `() {
-        val stepObserver: Observer<AuthStep> = mock()
+    fun `should authentication the user when received a correct email `() = runBlocking {
 
-        server.enqueue(MockResponse()
-                .setResponseCode(200)
-                .setBody(AUTH_RESPONSE_200))
+        doReturn(true)
+            .whenever(repository).auth(email)
 
-        doReturn(true).`when`(viewModel).isValidEmail(email)
+        viewModel.setEmail(email)
+        viewModel.auth()
 
-        viewModel.stepLiveData.observeForever(stepObserver)
+        val argumentCaptor = ArgumentCaptor.forClass(Any::class.java)
+        val buttonVisibilityExpected = AuthViewModelState.ButtonVisibility(true)
 
-        viewModel.auth(email)
-
-        verify(viewModel).isValidEmail(email)
-        verify(stepObserver).onChanged(AuthStep.IN_PROGRESS)
-        verify(repository).auth(email)
-
-        await()
-
-        verify(stepObserver).onChanged(AuthStep.SUCCESS)
-        assertNotNull(Session.user?.token)
+        argumentCaptor.run {
+            verify(observerState, times(3)).onChanged(capture())
+            assertEquals(buttonVisibilityExpected, allValues[0])
+            assertEquals(true, allValues[1] is AuthViewModelState.InProgressAddress)
+            assertEquals(true, allValues[2] is AuthViewModelState.Success)
+        }
     }
 
     @Test
-    fun `should show fail when authentication return a bad request `() {
-        val stepObserver: Observer<AuthStep> = mock()
+    fun `should show fail when authentication return a bad request `() = runBlocking {
 
-        server.enqueue(MockResponse()
-                .setResponseCode(400))
+        doReturn(false)
+            .whenever(repository).auth(email)
 
-        doReturn(true).`when`(viewModel).isValidEmail(email)
+        viewModel.setEmail(email)
+        viewModel.auth()
 
-        viewModel.stepLiveData.observeForever(stepObserver)
+        val argumentCaptor = ArgumentCaptor.forClass(Any::class.java)
+        val buttonVisibilityExpected = AuthViewModelState.ButtonVisibility(true)
 
-        viewModel.auth(email)
-
-        verify(viewModel).isValidEmail(email)
-        verify(stepObserver).onChanged(AuthStep.IN_PROGRESS)
-        verify(repository).auth(email)
-
-        await()
-
-        verify(stepObserver).onChanged(AuthStep.FAIL)
-        assertNull(Session.user?.token)
+        argumentCaptor.run {
+            verify(observerState, times(3)).onChanged(capture())
+            assertEquals(buttonVisibilityExpected, allValues[0])
+            assertEquals(true, allValues[1] is AuthViewModelState.InProgressAddress)
+            assertEquals(true, allValues[2] is AuthViewModelState.Fail)
+        }
     }
-
-    private val AUTH_RESPONSE_200 = "{\n" +
-            "    \"user\": {\n" +
-            "        \"_id\": \"5abbc826cb31ee004edc2769\",\n" +
-            "        \"email\": \"$email\",\n" +
-            "        \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJpZGRvZyIsInN1YiI6IjVhYmJjODI2Y2IzMWVlMDA0ZWRjMjc2OSIsImlhdCI6MTUyMjI1NTkxMCwiZXhwIjoxNTIzNTUxOTEwfQ.NXcsIZF0s4nPX1HScrOcym8eit9d6R9HwDG4xwbENNg\",\n" +
-            "        \"createdAt\": \"2018-03-28T16:51:50.379Z\",\n" +
-            "        \"updatedAt\": \"2018-03-28T16:51:50.379Z\",\n" +
-            "        \"__v\": 0\n" +
-            "    }\n" +
-            "}"
 }

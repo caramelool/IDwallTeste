@@ -2,24 +2,32 @@ package br.com.caramelo.idwallteste.data.repository
 
 import br.com.caramelo.idwallteste.data.model.entity.Session
 import br.com.caramelo.idwallteste.data.model.request.AuthRequest
-import kotlinx.coroutines.experimental.async
+import br.com.caramelo.idwallteste.ext.RequestException
+import br.com.caramelo.idwallteste.ext.await
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
-open class AuthRepository(
-        private val api: IDdogAPI
+class AuthRepository(
+    private val api: IDdogAPI
 ) {
-    open fun auth(email: String): RepositoryLiveData<Boolean> {
-        val liveData = RepositoryLiveData<Boolean>()
-        val body = AuthRequest(email)
-        async {
-            try {
-                val response = api.signup(body).await()
-                Session.user = response.user
-                liveData.postValue(true)
-            } catch (t: Throwable) {
-//                liveData.postThowable(t)
-                liveData.postValue(false)
-            }
+    suspend fun auth(email: String): Boolean {
+//mock for tests
+//        return suspendCoroutine {
+//            CoroutineScope(it.context).launch {
+//                delay(1000)
+//                it.resume(true)
+//            }
+//        }
+        return try {
+            val body = AuthRequest(email)
+            val response = api.signup(body).await()
+            Session.user = response?.user
+            response?.user != null
+        } catch (e: RequestException) {
+            false
         }
-        return liveData
     }
 }

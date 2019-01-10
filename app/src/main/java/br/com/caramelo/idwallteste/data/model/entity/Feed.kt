@@ -4,5 +4,5 @@ import com.google.gson.annotations.SerializedName
 
 class Feed(
     @SerializedName("category") val category: String?,
-    @SerializedName("list") val list: ArrayList<String>?
+    @SerializedName("list") val list: List<String>?
 )

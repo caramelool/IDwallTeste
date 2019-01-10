@@ -4,13 +4,13 @@ import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import br.com.caramelo.idwallteste.R
 import br.com.caramelo.idwallteste.data.model.entity.Feed
 import br.com.caramelo.idwallteste.ext.load
+import kotlinx.android.synthetic.main.adapter_feed.view.*
 
 class FeedAdapter(
-        private val onItemClickListener: (view: View, url: String) -> Unit
+    private val onItemClickListener: (view: View, url: String) -> Unit
 ) : RecyclerView.Adapter<FeedAdapter.FeedViewHolder>() {
 
     var feed: Feed? = null
@@ -19,28 +19,33 @@ class FeedAdapter(
             notifyDataSetChanged()
         }
 
+    private val list: List<String>
+        get() = feed?.list ?: listOf()
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FeedViewHolder {
         val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.adapter_feed, parent, false)
+            .inflate(R.layout.adapter_feed, parent, false)
         return FeedViewHolder(view)
     }
 
-    override fun getItemCount(): Int = feed?.list?.size ?: 0
+    override fun getItemCount(): Int = list.size
 
     override fun onBindViewHolder(holder: FeedViewHolder, position: Int) {
         holder.bind(position)
     }
 
-    inner class FeedViewHolder(view: View): RecyclerView.ViewHolder(view) {
+    inner class FeedViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         fun bind(position: Int) {
-            val imageView = itemView.findViewById<ImageView>(R.id.imageView)
-            val url = feed?.list?.get(position) ?: return
+            with(itemView) {
+                val url = list[position]
 
-            imageView.load(url)
+                imageView.load(url)
 
-            itemView.setOnClickListener {
-                onItemClickListener(imageView, url)
+                setOnClickListener {
+                    onItemClickListener(imageView, url)
+                }
             }
+
         }
 
     }

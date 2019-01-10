@@ -1,33 +1,34 @@
 package br.com.caramelo.idwallteste
 
+import android.app.Activity
 import android.app.Application
-import br.com.caramelo.idwallteste.data.di.picassoModule
-import br.com.caramelo.idwallteste.data.di.repositoryModule
-import br.com.caramelo.idwallteste.data.di.retrofitModule
-import com.github.salomonbrys.kodein.*
+import br.com.caramelo.idwallteste.data.di.AppComponent
+import br.com.caramelo.idwallteste.data.di.DaggerAppComponent
+import br.com.caramelo.idwallteste.data.di.module.AppModule
 import com.squareup.picasso.Picasso
+import dagger.android.DispatchingAndroidInjector
+import dagger.android.HasActivityInjector
+import javax.inject.Inject
 
-class IDwallApplication : Application(), KodeinAware {
-    override val kodein by Kodein.lazy {
-        bind<IDwallApplication>() with singleton { instance }
-        import(retrofitModule)
-        import(repositoryModule)
-        import(picassoModule)
+class IDwallApplication : Application(), HasActivityInjector {
+
+    @Inject
+    lateinit var activityDispatchingAndroidInjector: DispatchingAndroidInjector<Activity>
+
+    @Inject
+    lateinit var picasso: Picasso
+
+    private val component: AppComponent by lazy {
+        DaggerAppComponent.builder()
+            .appModule(AppModule(this@IDwallApplication))
+            .build()
     }
 
     override fun onCreate() {
         super.onCreate()
-        instance = this
-        configPicasso()
-    }
-
-    private fun configPicasso() {
-        val picasso: Picasso = instance()
-        picasso.setIndicatorsEnabled(false)
-        picasso.isLoggingEnabled = false
+        component.inject(this)
         Picasso.setSingletonInstance(picasso)
     }
-}
 
-private lateinit var instance: IDwallApplication
-val kodein by lazy { instance.kodein }
+    override fun activityInjector() = activityDispatchingAndroidInjector
+}

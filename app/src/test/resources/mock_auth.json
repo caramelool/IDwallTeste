@@ -1,0 +1,10 @@
+{
+    "user": {
+        "_id": "5abbc826cb31ee004edc2769",
+        "email": "lucascaramelo@gmail.com",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJpZGRvZyIsInN1YiI6IjVhYmJjODI2Y2IzMWVlMDA0ZWRjMjc2OSIsImlhdCI6MTUyMjI1NTkxMCwiZXhwIjoxNTIzNTUxOTEwfQ.NXcsIZF0s4nPX1HScrOcym8eit9d6R9HwDG4xwbENNg",
+        "createdAt": "2018-03-28T16:51:50.379Z",
+        "updateAt": "2018-03-28T16:51:50.379Z"
+
+    }
+}
